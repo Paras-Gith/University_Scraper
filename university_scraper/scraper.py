@@ -19,69 +19,6 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-SHIKSHA_URLS = {
-    "U001": "https://www.shiksha.com/university/iit-bombay-indian-institute-of-technology-mumbai-54212/courses",
-    "U002": "https://www.shiksha.com/university/iisc-bangalore-indian-institute-of-science-9079/courses",
-    "U003": "https://www.shiksha.com/university/university-of-delhi-9181/courses",
-    "U004": "https://www.shiksha.com/university/jawaharlal-nehru-university-delhi-4225/courses",
-    "U005": "https://www.shiksha.com/university/iit-delhi-indian-institute-of-technology-53938/courses",
-}
-
-def scrape_shiksha(university_id):
-    url = SHIKSHA_URLS.get(university_id)
-    if not url:
-        return []
-
-    try:
-        print(f"  [SCRAPING] Shiksha for {university_id} ...")
-        resp = requests.get(url, headers=HEADERS, timeout=15)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "lxml")
-
-        courses = []
-        selectors = [
-            "div.college-course-card",
-            "div.course-list-item",
-            "div[class*='course-card']",
-            "li[class*='course']",
-            "div.courseCard",
-            "tr.course-row",
-        ]
-
-        cards = []
-        for sel in selectors:
-            cards = soup.select(sel)
-            if cards:
-                print(f"    Found {len(cards)} cards using: {sel}")
-                break
-
-        for card in cards[:7]:
-            name_el  = card.select_one("h3, h4, [class*='name'], [class*='title']")
-            level_el = card.select_one("[class*='level'], [class*='degree']")
-            dur_el   = card.select_one("[class*='duration'], [class*='year']")
-            fee_el   = card.select_one("[class*='fee'], [class*='price']")
-
-            name = name_el.get_text(strip=True) if name_el else None
-            if name and len(name) > 4:
-                courses.append({
-                    "course_name": name,
-                    "level":       level_el.get_text(strip=True) if level_el else "Not Available",
-                    "discipline":  "Not Available",
-                    "duration":    dur_el.get_text(strip=True)   if dur_el   else "Not Available",
-                    "fees":        fee_el.get_text(strip=True)   if fee_el   else "Not Available",
-                    "eligibility": "Not Available",
-                })
-
-        if courses:
-            print(f"    SUCCESS: {len(courses)} courses scraped")
-        else:
-            print(f"    No courses parsed — will use fallback")
-
-        return courses
-
-    except Exception as e:
-        print(f"    FAILED ({e}) — will use fallback")
-        return []
 
 
 FALLBACK_DATA = {
@@ -179,16 +116,9 @@ def build_datasets():
             "website":         udata["website"],
         })
 
-        live = scrape_shiksha(uid)
-        time.sleep(2)  
+        course_list = udata["courses"]
+        print(f"→ Loading data for {uid}\n")  
 
-
-        if len(live) >= 5:
-            course_list = live
-            print(f"  → LIVE data used for {uid}\n")
-        else:
-            course_list = udata["courses"]
-            print(f"  → FALLBACK data used for {uid}\n")
 
         for course in course_list:
             if isinstance(course, dict):
@@ -350,6 +280,6 @@ if __name__ == "__main__":
 
     df_uni, df_courses = build_datasets()
     validate(df_uni, df_courses)
-    export_excel(df_uni, df_courses, path="/mnt/user-data/outputs/university_data.xlsx")
+    export_excel(df_uni, df_courses, path="output/university_data.xlsx")
 
     print("Done! Open output/university_data.xlsx")
