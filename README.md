@@ -143,3 +143,4 @@ Relational integrity OK
 
 ---
 
+"I’ve also created a similar project named news_scrapper, which is inside my mini-project repo."
